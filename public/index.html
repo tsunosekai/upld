@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Uploader</title>
+  <style>
+    /* スタイルは適宜追加・調整してください */
+  </style>
+</head>
+<body>
+  <div id="free-space"></div>
+  <div id="drop-area">
+    <h3>ツノドライブ</h3>
+    <input type="file" id="file-input"/>
+  </div>
+  <ul id="file-list"></ul>
+  <script>
+    async function updateFreeSpace() {
+      const response = await fetch('/freespace');
+      const { freeSpace } = await response.json();
+      const freeSpaceElement = document.getElementById('free-space');
+      const freeSpaceInMB = (freeSpace / (1024 * 1024)).toFixed(2);
+      freeSpaceElement.innerText = `サーバーの空き容量: ${freeSpaceInMB} MB`;
+    }
+
+    async function updateFileList() {
+      const response = await fetch('/filelist');
+      const files = await response.json();
+      const fileList = document.getElementById('file-list');
+      fileList.innerHTML = '';
+      files.forEach((file) => {
+        const li = document.createElement('li');
+        li.innerText = file;
+
+        const downloadButton = document.createElement('button');
+        downloadButton.innerText = 'ダウンロード';
+        downloadButton.onclick = () => {
+          window.location.href = `/files/${encodeURIComponent(file)}`;
+        };
+        li.appendChild(downloadButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.innerText = '削除';
+        deleteButton.onclick = async () => {
+          await fetch(`/deletefile/${encodeURIComponent(file)}`, { method: 'DELETE' });
+          updateFileList();
+        };
+        li.appendChild(deleteButton);
+        fileList.appendChild(li);
+      });
+    }
+
+    function setupDragAndDrop() {
+      const dropArea = document.getElementById('drop-area');
+      dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.style.backgroundColor = '#f0f0f0';
+      });
+
+      dropArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropArea.style.backgroundColor = '';
+      });
+
+      dropArea.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropArea.style.backgroundColor = '';
+
+        const formData = new FormData();
+        for (const file of e.dataTransfer.files) {
+          formData.append('file', file);
+        }
+        await fetch('/upload', { method: 'POST', body: formData });
+        updateFileList();
+        updateFreeSpace();
+      });
+    }
+
+    function setupFileInput() {
+      const fileInput = document.getElementById('file-input');
+      fileInput.addEventListener('change', async (e) => {
+        const formData = new FormData();
+        formData.append('file', e.target.files[0]);
+        await fetch('/upload', { method: 'POST', body: formData });
+        updateFileList();
+        updateFreeSpace();
+      });
+    }
+
+    updateFreeSpace();
+    updateFileList();
+    setupDragAndDrop();
+    setupFileInput();
+  </script>
+</body>
+</html>
