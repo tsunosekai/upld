@@ -22,7 +22,7 @@ app.use(express.static('public'));
 
 // ファイルアップロードのルートを設定
 app.post('/upload', upload.single('file'), (req, res) => {
-  res.send('File uploaded successfully');
+  res.redirect('/');
 });
 
 // ファイル一覧を取得
